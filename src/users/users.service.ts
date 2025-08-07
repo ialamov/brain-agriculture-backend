@@ -17,7 +17,7 @@ export class UsersService {
 		try {
 			return this.userRepository.find();
 		} catch (error) {
-
+			this.logger.error('Failed to fetch users', undefined, 'UsersService');
 			throw new HttpException('Failed to fetch users', HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -27,11 +27,13 @@ export class UsersService {
 			const user = await this.userRepository.update(id, updateUserDto);
 
 			if (user.affected === 0) {
+				this.logger.error('User not found', undefined, 'UsersService');
 				throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 			}
 
 			return { message: 'User updated successfully' };
 		} catch (error) {
+			this.logger.error('Failed to update user', undefined, 'UsersService');
 			throw new HttpException('Failed to update user', HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -40,10 +42,12 @@ export class UsersService {
 		try {
 			const result = await this.userRepository.delete(email);
 			if (result.affected === 0) {
+				this.logger.error(`User with email ${email} was not found`, undefined, 'UsersService');
 				throw new HttpException(`User with email ${email} was not found`, HttpStatus.NOT_FOUND);
 			}
 			return { message: 'User deleted successfully' };
 		} catch (error) {
+			this.logger.error('Failed to delete user', undefined, 'UsersService');
 			throw new HttpException('Failed to delete user', HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
