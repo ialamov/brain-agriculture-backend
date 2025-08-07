@@ -8,6 +8,8 @@ import { Farm } from './entities/farm.entity';
 import { Farmer } from './entities/farmer.entity';
 import { Harvest } from './entities/harvest.entity';
 import { User } from './entities/user.entity';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { User } from './entities/user.entity';
       logging: process.env.DB_LOGGING === 'true',
     }),
     CommonModule,
+    UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {
