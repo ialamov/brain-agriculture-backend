@@ -2,9 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { User } from '../entities/user.entity';
+import { HttpException } from '@nestjs/common';
 
 const mockUsersService = () => ({
   findAll: jest.fn(),
+  update: jest.fn(),
+  remove: jest.fn(),
 });
 
 describe('UsersController', () => {
@@ -42,5 +45,25 @@ describe('UsersController', () => {
 
     expect(result).toEqual(mockUsers);
     expect(usersService.findAll).toHaveBeenCalled();
+  });
+
+  it('should update a user', async () => {
+    const updateUserDto = { password: 'updatedPassword' };
+
+    jest.spyOn(usersService, 'update').mockResolvedValue({ message: 'User updated successfully' });
+
+    const result = await controller.update('1', updateUserDto);
+
+    expect(result).toEqual({ message: 'User updated successfully' });
+    expect(usersService.update).toHaveBeenCalledWith('1', updateUserDto);
+  });
+
+  it('should remove a user', async () => {
+    jest.spyOn(usersService, 'remove').mockResolvedValue({ message: 'User deleted successfully' });
+
+    const result = await controller.remove('1');
+
+    expect(result).toEqual({ message: 'User deleted successfully' });
+    expect(usersService.remove).toHaveBeenCalledWith('1');
   });
 });
