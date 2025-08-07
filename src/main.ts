@@ -5,6 +5,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 import { LoggerService } from './common/services/logger.service';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,12 @@ async function bootstrap() {
   app.useGlobalInterceptors(loggingInterceptor, performanceInterceptor);
 
   app.enableCors();
+
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
 
   app.setGlobalPrefix('api/v1');
 

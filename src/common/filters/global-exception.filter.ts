@@ -15,6 +15,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   constructor(private readonly loggerService: LoggerService) {}
 
+  private sanitizeRequestBody(body: any): any {
+    if (!body || typeof body !== 'object') {
+      return body;
+    }
+
+    const sanitized = { ...body };
+    const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization'];
+
+    sensitiveFields.forEach(field => {
+      if (sanitized[field]) {
+        sanitized[field] = '[REDACTED]';
+      }
+    });
+
+    return sanitized;
+  }
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -48,11 +65,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       `${request.method} ${request.url}`
     );
 
+    // Sanitize request body to remove sensitive data
+    const sanitizedBody = this.sanitizeRequestBody(request.body);
+    
     this.loggerService.error(
       `Request details: ${JSON.stringify({
         method: request.method,
         url: request.url,
-        body: request.body,
+        body: sanitizedBody,
         params: request.params,
         query: request.query,
         headers: request.headers,

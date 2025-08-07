@@ -10,6 +10,7 @@ import { Harvest } from './entities/harvest.entity';
 import { User } from './entities/user.entity';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { FarmersModule } from './farmers/farmers.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuthModule } from './auth/auth.module';
     CommonModule,
     UsersModule,
     AuthModule,
+    FarmersModule,
   ],
 })
 export class AppModule {

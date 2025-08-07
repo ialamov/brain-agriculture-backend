@@ -5,12 +5,15 @@ import { User } from '../entities/user.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { UsersModule } from 'src/users/users.module';
+import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { AuthController } from './auth.controller';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
+    CommonModule,
     UsersModule,
     PassportModule,
     TypeOrmModule.forFeature([User]),
@@ -23,6 +26,7 @@ import { LocalStrategy } from './strategies/local.strategy';
       inject: [ConfigService],
     }),
   ],
+  controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy],
   exports: [AuthService],
 })

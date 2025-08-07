@@ -7,6 +7,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { Repository } from 'typeorm';
 import { LoginDto } from './dto/login.dto';
 import { UserWithoutPassword } from './dto/user.interface';
+import { LoggerService } from '../common/services/logger.service';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,7 @@ export class AuthService {
         @InjectRepository(User)
         private userRepository: Repository<User>,
         private readonly jwtService: JwtService,
+        private logger: LoggerService,
     ) {}
 
     async create(createUserDto: CreateUserDto): Promise<{ accessToken: string }> {
@@ -41,6 +43,7 @@ export class AuthService {
     async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
         const user = await this.validateUser(loginDto.email, loginDto.password);
         if (!user) {
+            this.logger.error('Invalid credentials', undefined, 'AuthService');
             throw new BadRequestException('Invalid credentials');
         }
         return {

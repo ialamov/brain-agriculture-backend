@@ -30,17 +30,18 @@ export class LoggerMiddleware implements NestMiddleware {
     );
 
     const originalSend = res.send;
+    const loggerService = this.loggerService;
     res.send = function(data) {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      this.loggerService.log(
+      loggerService.log(
         `HTTP Response: ${method} ${url} - ${res.statusCode} - ${duration}ms`,
         'HTTP-Middleware'
       );
 
       return originalSend.call(this, data);
-    }.bind(this);
+    };
 
     next();
   }
