@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { FarmersModule } from './farmers/farmers.module';
 import { FarmsModule } from './farms/farms.module';
+import { HarvestsModule } from './harvests/harvests.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { FarmsModule } from './farms/farms.module';
     AuthModule,
     FarmersModule,
     FarmsModule,
+    HarvestsModule,
   ],
 })
 export class AppModule {
