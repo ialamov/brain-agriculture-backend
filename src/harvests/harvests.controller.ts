@@ -8,7 +8,7 @@ import { Harvest } from '../entities/harvest.entity';
 
 @ApiTags('Harvests')
 @ApiBearerAuth()
-@Controller('harvest')
+@Controller('harvests')
 @UseGuards(AuthGuard('local'))
 export class HarvestsController {
   constructor(private readonly harvestsService: HarvestsService) {}

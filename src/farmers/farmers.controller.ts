@@ -7,7 +7,7 @@ import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 
 @ApiTags('Farmers')
-@Controller('farmer')
+@Controller('farmers')
 @UseGuards(AuthGuard('local'))
 export class FarmersController {
   constructor(private readonly farmersService: FarmersService) {}

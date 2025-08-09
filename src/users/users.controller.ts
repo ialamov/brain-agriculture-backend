@@ -7,7 +7,6 @@ import { User } from '../entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
-@ApiBearerAuth()
 @Controller('users')
 @UseGuards(AuthGuard('local'))
 export class UsersController {

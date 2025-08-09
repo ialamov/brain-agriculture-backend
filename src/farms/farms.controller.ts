@@ -7,7 +7,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { Farm } from '../entities/farm.entity';
 
 @ApiTags('Farms')
-@ApiBearerAuth()
 @Controller('farms')
 @UseGuards(AuthGuard('local'))
 export class FarmsController {
