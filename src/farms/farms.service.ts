@@ -11,40 +11,43 @@ export class FarmsService {
   constructor(
     @InjectRepository(Farm)
     private readonly farmRepository: Repository<Farm>,
-		private readonly loggerService: LoggerService,
+    private readonly loggerService: LoggerService,
   ) {}
 
   async create(createFarmDto: CreateFarmDto): Promise<Farm> {
-		try { 
-    if (createFarmDto.cultivationArea > createFarmDto.totalArea) {
-			this.loggerService.error('Cultivation area cannot be greater than total area');
-      throw new HttpException('Cultivation area cannot be greater than total area', HttpStatus.FORBIDDEN);
-    }
-    if (createFarmDto.vegetationArea > createFarmDto.totalArea) {
-			this.loggerService.error('Vegetation area cannot be greater than total area');
-      throw new HttpException('Vegetation area cannot be greater than total area', HttpStatus.FORBIDDEN);
-    }
-    if (createFarmDto.cultivationArea + createFarmDto.vegetationArea > createFarmDto.totalArea) {
-			this.loggerService.error('Cultivation and vegetation area cannot be greater than total area');
-      throw new HttpException('Cultivation and vegetation area cannot be greater than total area', HttpStatus.FORBIDDEN);
-    }
+    try { 
+      if (createFarmDto.cultivationArea > createFarmDto.totalArea) {
+        this.loggerService.error('Cultivation area cannot be greater than total area');
+        throw new BadRequestException('Cultivation area cannot be greater than total area');
+      }
+      if (createFarmDto.vegetationArea > createFarmDto.totalArea) {
+        this.loggerService.error('Vegetation area cannot be greater than total area');
+        throw new BadRequestException('Vegetation area cannot be greater than total area');
+      }
+      if (createFarmDto.cultivationArea + createFarmDto.vegetationArea > createFarmDto.totalArea) {
+        this.loggerService.error('Cultivation and vegetation area cannot be greater than total area');
+        throw new BadRequestException('Cultivation and vegetation area cannot be greater than total area');
+      }
 
-    const farm = this.farmRepository.create(createFarmDto);
-    return this.farmRepository.save(farm);
-		} catch (error) {
-			if (error instanceof HttpException) {
-				throw error;
-			}
-			this.loggerService.error('Failed to create farm', error);
-			throw new HttpException('Failed to create farm', HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+      const farm = this.farmRepository.create(createFarmDto);
+      return this.farmRepository.save(farm);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.loggerService.error('Failed to create farm', error);
+      throw new HttpException('Failed to create farm', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  async findAll(): Promise<Farm[]> {
+  async findAll(page: number = 1, pageSize: number = 10): Promise<{ farms: Farm[]; total: number }> {
     try {
-    return this.farmRepository.find({
-      relations: ['farmer'],
-    });
+      const [farms, total] = await this.farmRepository.findAndCount({
+        relations: ['farmer'],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      });
+      return { farms, total };
     } catch (error) {
       this.loggerService.error('Failed to find all farms', error);
       throw new HttpException('Failed to find all farms', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -53,17 +56,17 @@ export class FarmsService {
 
   async findOne(id: string): Promise<Farm> {
     try {
-    const farm = await this.farmRepository.findOne({
-      where: { id },
-      relations: ['farmer'],
-    });
-    
-    if (!farm) {
-      this.loggerService.error(`Farm with ID ${id} not found`);
-      throw new NotFoundException(`Farm with ID ${id} not found`);
-    }
-    
-    return farm;
+      const farm = await this.farmRepository.findOne({
+        where: { id },
+        relations: ['farmer'],
+      });
+      
+      if (!farm) {
+        this.loggerService.error(`Farm with ID ${id} not found`);
+        throw new NotFoundException(`Farm with ID ${id} not found`);
+      }
+      
+      return farm;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -75,24 +78,29 @@ export class FarmsService {
 
   async update(id: string, updateFarmDto: UpdateFarmDto): Promise<Farm> {
     try {
-    const farm = await this.findOne(id);
-    
-    Object.assign(farm, updateFarmDto);
-    
-    if (farm.cultivationArea > farm.totalArea) {
-      this.loggerService.error('Cultivation area cannot be greater than total area');
-      throw new BadRequestException('Cultivation area cannot be greater than total area');
-    }
-    if (farm.vegetationArea > farm.totalArea) { 
-      this.loggerService.error('Vegetation area cannot be greater than total area');
-      throw new BadRequestException('Vegetation area cannot be greater than total area');
-    }
-    if (farm.cultivationArea + farm.vegetationArea > farm.totalArea) {
-      this.loggerService.error('Cultivation and vegetation area cannot be greater than total area');
-      throw new BadRequestException('Cultivation and vegetation area cannot be greater than total area');
-      }
+      const farm = await this.findOne(id);
       
-      return this.farmRepository.save(farm);
+      const { farmerId, ...farmData } = updateFarmDto || {};
+      
+      const mergedFarm = this.farmRepository.merge(farm, {
+        ...farmData,
+        ...(farmerId && { farmerId })
+      });
+      
+      if (mergedFarm.cultivationArea > mergedFarm.totalArea) {
+        this.loggerService.error('Cultivation area cannot be greater than total area');
+        throw new BadRequestException('Cultivation area cannot be greater than total area');
+      }
+      if (mergedFarm.vegetationArea > mergedFarm.totalArea) { 
+        this.loggerService.error('Vegetation area cannot be greater than total area');
+        throw new BadRequestException('Vegetation area cannot be greater than total area');
+      }
+      if (mergedFarm.cultivationArea + mergedFarm.vegetationArea > mergedFarm.totalArea) {
+        this.loggerService.error('Cultivation and vegetation area cannot be greater than total area');
+        throw new BadRequestException('Cultivation and vegetation area cannot be greater than total area');
+      }
+    
+      return this.farmRepository.save(mergedFarm);
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
@@ -104,11 +112,11 @@ export class FarmsService {
 
   async remove(id: string): Promise<void> {
     try {
-    const result = await this.farmRepository.delete(id);
-    if (result.affected === 0) {
-      this.loggerService.error(`Farm with ID ${id} was not found`);
-      throw new NotFoundException(`Farm with ID ${id} was not found`);
-    }
+      const result = await this.farmRepository.delete(id);
+      if (result.affected === 0) {
+        this.loggerService.error(`Farm with ID ${id} was not found`);
+        throw new NotFoundException(`Farm with ID ${id} was not found`);
+      }
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

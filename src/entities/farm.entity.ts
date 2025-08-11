@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { Farmer } from "./farmer.entity";
 import { Harvest } from "./harvest.entity";
 
@@ -25,7 +25,11 @@ export class Farm {
   @Column('decimal', { precision: 10, scale: 2 })
   vegetationArea: number;
 
+  @Column({ name: 'farmerId' })
+  farmerId: string;
+
   @ManyToOne(() => Farmer, (farmer) => farmer.farm, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'farmerId' })
   farmer: Farmer;
 
   @OneToMany(() => Harvest, (harvest) => harvest.farm)

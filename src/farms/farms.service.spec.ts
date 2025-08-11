@@ -14,6 +14,8 @@ const mockFarmRepository = () => ({
   find: jest.fn(),
   findOne: jest.fn(),
   delete: jest.fn(),
+  findAndCount: jest.fn(),
+  merge: jest.fn(),
 });
 
 const mockLoggerService = () => ({
@@ -171,20 +173,38 @@ describe('FarmsService', () => {
           farmer: { id: 'farmer-id-1' },
           harvests: [],
         },
+        {
+          id: '2',
+          name: 'Fazenda Boa Vista',
+          city: 'Rio de Janeiro',
+          state: 'RJ',
+          totalArea: 150.0,
+          cultivationArea: 120.0,
+          vegetationArea: 30.0,
+          farmer: { id: 'farmer-id-2' },
+          harvests: [],
+        },
       ] as unknown as Farm[];
 
-      jest.spyOn(farmRepository, 'find').mockResolvedValue(expectedFarms);
+      const expectedResult = {
+        farms: expectedFarms,
+        total: 2,
+      };
+
+      jest.spyOn(farmRepository, 'findAndCount').mockResolvedValue([expectedFarms, 2]);
 
       const result = await service.findAll();
 
-      expect(result).toEqual(expectedFarms);
-      expect(farmRepository.find).toHaveBeenCalledWith({
+      expect(result).toEqual(expectedResult);
+      expect(farmRepository.findAndCount).toHaveBeenCalledWith({
         relations: ['farmer'],
+        skip: 0,
+        take: 10,
       });
     });
 
     it('should throw HttpException for database error', async () => {
-      jest.spyOn(farmRepository, 'find').mockImplementation(() => {
+      jest.spyOn(farmRepository, 'findAndCount').mockImplementation(() => {
         throw new Error('Database error');
       });
       jest.spyOn(loggerService, 'error').mockImplementation();
@@ -253,6 +273,7 @@ describe('FarmsService', () => {
         totalArea: 100.0,
         cultivationArea: 70.0,
         vegetationArea: 20.0,
+        farmerId: 'farmer-id-1',
         farmer: { id: 'farmer-id-1' },
         harvests: [],
       } as unknown as Farm;
@@ -263,12 +284,55 @@ describe('FarmsService', () => {
       } as unknown as Farm;
 
       jest.spyOn(service, 'findOne').mockResolvedValue(existingFarm);
+      jest.spyOn(farmRepository, 'merge').mockReturnValue(updatedFarm);
       jest.spyOn(farmRepository, 'save').mockResolvedValue(updatedFarm);
 
       const result = await service.update('1', updateFarmDto);
 
       expect(result).toEqual(updatedFarm);
       expect(service.findOne).toHaveBeenCalledWith('1');
+      expect(farmRepository.merge).toHaveBeenCalledWith(existingFarm, updateFarmDto);
+      expect(farmRepository.save).toHaveBeenCalledWith(updatedFarm);
+    });
+
+    it('should update farm with new farmerId successfully', async () => {
+      const updateFarmDto: UpdateFarmDto = {
+        name: 'Updated Farm Name',
+        farmerId: 'new-farmer-id',
+      };
+
+      const existingFarm = {
+        id: '1',
+        name: 'Original Farm Name',
+        city: 'São Paulo',
+        state: 'SP',
+        totalArea: 100.0,
+        cultivationArea: 70.0,
+        vegetationArea: 20.0,
+        farmerId: 'old-farmer-id',
+        farmer: { id: 'old-farmer-id' },
+        harvests: [],
+      } as unknown as Farm;
+
+      const updatedFarm = {
+        ...existingFarm,
+        name: 'Updated Farm Name',
+        farmerId: 'new-farmer-id',
+        farmer: { id: 'new-farmer-id' },
+      } as unknown as Farm;
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(existingFarm);
+      jest.spyOn(farmRepository, 'merge').mockReturnValue(updatedFarm);
+      jest.spyOn(farmRepository, 'save').mockResolvedValue(updatedFarm);
+
+      const result = await service.update('1', updateFarmDto);
+
+      expect(result).toEqual(updatedFarm);
+      expect(service.findOne).toHaveBeenCalledWith('1');
+      expect(farmRepository.merge).toHaveBeenCalledWith(existingFarm, {
+        name: 'Updated Farm Name',
+        farmerId: 'new-farmer-id',
+      });
       expect(farmRepository.save).toHaveBeenCalledWith(updatedFarm);
     });
 
@@ -289,7 +353,13 @@ describe('FarmsService', () => {
         harvests: [],
       } as unknown as Farm;
 
+      const mergedFarm = {
+        ...existingFarm,
+        cultivationArea: 120.0,
+      } as unknown as Farm;
+
       jest.spyOn(service, 'findOne').mockResolvedValue(existingFarm);
+      jest.spyOn(farmRepository, 'merge').mockReturnValue(mergedFarm);
       jest.spyOn(loggerService, 'error').mockImplementation();
 
       await expect(service.update('1', updateFarmDto)).rejects.toThrow(BadRequestException);
@@ -313,7 +383,13 @@ describe('FarmsService', () => {
         harvests: [],
       } as unknown as Farm;
 
+      const mergedFarm = {
+        ...existingFarm,
+        vegetationArea: 120.0,
+      } as unknown as Farm;
+
       jest.spyOn(service, 'findOne').mockResolvedValue(existingFarm);
+      jest.spyOn(farmRepository, 'merge').mockReturnValue(mergedFarm);
       jest.spyOn(loggerService, 'error').mockImplementation();
 
       await expect(service.update('1', updateFarmDto)).rejects.toThrow(BadRequestException);
@@ -338,7 +414,14 @@ describe('FarmsService', () => {
         harvests: [],
       } as unknown as Farm;
 
+      const mergedFarm = {
+        ...existingFarm,
+        cultivationArea: 80.0,
+        vegetationArea: 30.0,
+      } as unknown as Farm;
+
       jest.spyOn(service, 'findOne').mockResolvedValue(existingFarm);
+      jest.spyOn(farmRepository, 'merge').mockReturnValue(mergedFarm);
       jest.spyOn(loggerService, 'error').mockImplementation();
 
       await expect(service.update('1', updateFarmDto)).rejects.toThrow(BadRequestException);
