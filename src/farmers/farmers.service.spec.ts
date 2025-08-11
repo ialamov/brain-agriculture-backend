@@ -7,8 +7,10 @@ import { LoggerService } from '../common/services/logger.service';
 import { CreateFarmerDto } from './dto/create-farmer.dto';
 import { UpdateFarmerDto } from './dto/update-farmer.dto';
 import { BadRequestException, HttpException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Farm } from '../entities/farm.entity';
+import { Harvest } from '../entities/harvest.entity';
+import { Crop } from '../entities/crop.entity';
 
-// Mock the ValidateCPFAndCNPJ utility
 jest.mock('../utils/validate-cpf-cnpj', () => ({
   ValidateCPFAndCNPJ: {
     validateCPF: jest.fn(),
@@ -22,6 +24,9 @@ const mockFarmerRepository = () => ({
   find: jest.fn(),
   findOne: jest.fn(),
   delete: jest.fn(),
+  manager: {
+    transaction: jest.fn(),
+  },
 });
 
 const mockLoggerService = () => ({
@@ -127,8 +132,8 @@ describe('FarmersService', () => {
 
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.create(createFarmerDto)).rejects.toThrow(HttpException);
-      expect(logger.error).toHaveBeenCalledWith('Failed to create farmer', undefined, 'FarmerService');
+      await expect(service.create(createFarmerDto)).rejects.toThrow(BadRequestException);
+      expect(logger.error).toHaveBeenCalledWith('Farmer cannot have both CNPJ and CPF', undefined, 'FarmerService');
     });
 
     it('should throw BadRequestException when farmer has neither CPF nor CNPJ', async () => {
@@ -140,8 +145,8 @@ describe('FarmersService', () => {
 
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.create(createFarmerDto)).rejects.toThrow(HttpException);
-      expect(logger.error).toHaveBeenCalledWith('Failed to create farmer', undefined, 'FarmerService');
+      await expect(service.create(createFarmerDto)).rejects.toThrow(BadRequestException);
+      expect(logger.error).toHaveBeenCalledWith('Farmer must have either CNPJ or CPF', undefined, 'FarmerService');
     });
 
     it('should throw BadRequestException for invalid CPF', async () => {
@@ -156,8 +161,8 @@ describe('FarmersService', () => {
 
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.create(createFarmerDto)).rejects.toThrow(HttpException);
-      expect(logger.error).toHaveBeenCalledWith('Failed to create farmer', undefined, 'FarmerService');
+      await expect(service.create(createFarmerDto)).rejects.toThrow(BadRequestException);
+      expect(logger.error).toHaveBeenCalledWith('Invalid CPF: 123.456.789-99', undefined, 'FarmerService');
     });
 
     it('should throw BadRequestException for invalid CNPJ', async () => {
@@ -172,8 +177,8 @@ describe('FarmersService', () => {
 
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.create(createFarmerDto)).rejects.toThrow(HttpException);
-      expect(logger.error).toHaveBeenCalledWith('Failed to create farmer', undefined, 'FarmerService');
+      await expect(service.create(createFarmerDto)).rejects.toThrow(BadRequestException);
+      expect(logger.error).toHaveBeenCalledWith('Invalid CNPJ: 12.345.678/0001-99', undefined, 'FarmerService');
     });
 
     it('should throw HttpException for database error', async () => {
@@ -197,7 +202,7 @@ describe('FarmersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all farmers', async () => {
+    it('should return all farmers with pagination', async () => {
       const expectedFarmers = [
         { id: '1', name: 'Farmer 1', cpf: '123.456.789-00', cnpj: null, farm: [] },
         { id: '2', name: 'Farmer 2', cpf: null, cnpj: '12.345.678/0001-90', farm: [] },
@@ -205,17 +210,17 @@ describe('FarmersService', () => {
 
       jest.spyOn(farmerRepository, 'find').mockResolvedValue(expectedFarmers);
 
-      const result = await service.findAll();
+      const result = await service.findAll(1, 10);
 
       expect(result).toEqual(expectedFarmers);
-      expect(farmerRepository.find).toHaveBeenCalled();
+      expect(farmerRepository.find).toHaveBeenCalledWith({ skip: 0, take: 10 });
     });
 
     it('should throw InternalServerErrorException for database error', async () => {
       jest.spyOn(farmerRepository, 'find').mockRejectedValue(new Error('Database error'));
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.findAll()).rejects.toThrow(InternalServerErrorException);
+      await expect(service.findAll(1, 10)).rejects.toThrow(InternalServerErrorException);
       expect(logger.error).toHaveBeenCalledWith('Error finding all farmers: Error: Database error', undefined, 'FarmerService');
     });
   });
@@ -242,8 +247,8 @@ describe('FarmersService', () => {
       jest.spyOn(farmerRepository, 'findOne').mockResolvedValue(null);
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.findOne('999')).rejects.toThrow(InternalServerErrorException);
-      expect(logger.error).toHaveBeenCalledWith('Error finding farmer with ID 999: NotFoundException: Farmer with ID 999 not found', undefined, 'FarmerService');
+      await expect(service.findOne('999')).rejects.toThrow(NotFoundException);
+      expect(logger.error).toHaveBeenCalledWith('Farmer with ID 999 not found', undefined, 'FarmerService');
     });
 
     it('should throw InternalServerErrorException for database error', async () => {
@@ -282,6 +287,18 @@ describe('FarmersService', () => {
       expect(farmerRepository.save).toHaveBeenCalledWith(updatedFarmer);
     });
 
+    it('should throw NotFoundException when farmer not found during update', async () => {
+      const updateFarmerDto: UpdateFarmerDto = {
+        name: 'Updated Name',
+      };
+
+      jest.spyOn(service, 'findOne').mockRejectedValue(new NotFoundException('Farmer with ID 1 not found'));
+      jest.spyOn(logger, 'error').mockImplementation();
+
+      await expect(service.update('1', updateFarmerDto)).rejects.toThrow(NotFoundException);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
     it('should throw InternalServerErrorException for database error', async () => {
       const updateFarmerDto: UpdateFarmerDto = {
         name: 'Updated Name',
@@ -296,28 +313,52 @@ describe('FarmersService', () => {
   });
 
   describe('remove', () => {
-    it('should remove a farmer successfully', async () => {
-      jest.spyOn(farmerRepository, 'delete').mockResolvedValue({ affected: 1 } as any);
+    it('should remove a farmer successfully with cascade deletion', async () => {
+      const mockTransaction = jest.fn().mockImplementation(async (callback) => {
+        const mockManager = {
+          find: jest.fn().mockResolvedValue([]),
+          delete: jest.fn().mockResolvedValue({ affected: 1 }),
+        };
+        
+        await callback(mockManager);
+      });
+
+      jest.spyOn(farmerRepository.manager, 'transaction').mockImplementation(mockTransaction);
+      jest.spyOn(service, 'findOne').mockResolvedValue({} as Farmer);
+      jest.spyOn(logger, 'log').mockImplementation();
 
       await service.remove('1');
 
-      expect(farmerRepository.delete).toHaveBeenCalledWith('1');
+      expect(farmerRepository.manager.transaction).toHaveBeenCalled();
+      expect(logger.log).toHaveBeenCalledWith('Successfully deleted farmer with ID 1 and all related data', 'FarmerService');
     });
 
-    it('should throw NotFoundException when farmer not found', async () => {
-      jest.spyOn(farmerRepository, 'delete').mockResolvedValue({ affected: 0 } as any);
+    it('should throw NotFoundException when farmer not found during removal', async () => {
+      jest.spyOn(service, 'findOne').mockRejectedValue(new NotFoundException('Farmer with ID 999 not found'));
       jest.spyOn(logger, 'error').mockImplementation();
 
-      await expect(service.remove('999')).rejects.toThrow(InternalServerErrorException);
-      expect(logger.error).toHaveBeenCalledWith('Error deleting farmer with ID 999: NotFoundException: Farmer with ID 999 was not found', undefined, 'FarmerService');
+      await expect(service.remove('999')).rejects.toThrow(NotFoundException);
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
     it('should throw InternalServerErrorException for database error', async () => {
-      jest.spyOn(farmerRepository, 'delete').mockRejectedValue(new Error('Database error'));
+      jest.spyOn(service, 'findOne').mockRejectedValue(new Error('Database error'));
       jest.spyOn(logger, 'error').mockImplementation();
 
       await expect(service.remove('1')).rejects.toThrow(InternalServerErrorException);
-      expect(logger.error).toHaveBeenCalledWith('Error deleting farmer with ID 1: Error: Database error', undefined, 'FarmerService');
+      expect(logger.error).toHaveBeenCalledWith('Error deleting farmer with ID 1: Database error', expect.any(String), 'FarmerService');
+    });
+
+    it('should handle foreign key constraint violation', async () => {
+      const dbError = new Error('Foreign key constraint violation');
+      (dbError as any).code = '23503';
+
+      jest.spyOn(service, 'findOne').mockResolvedValue({} as Farmer);
+      jest.spyOn(farmerRepository.manager, 'transaction').mockRejectedValue(dbError);
+      jest.spyOn(logger, 'error').mockImplementation();
+
+      await expect(service.remove('1')).rejects.toThrow(BadRequestException);
+      expect(logger.error).toHaveBeenCalledWith('Error deleting farmer with ID 1: Foreign key constraint violation', expect.any(String), 'FarmerService');
     });
   });
 });

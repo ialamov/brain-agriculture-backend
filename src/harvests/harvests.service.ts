@@ -20,7 +20,7 @@ export class HarvestsService {
       return this.harvestRepository.save(harvest);
     } catch (error) {
       this.loggerService.error('Failed to create harvest', error);
-      throw new HttpException('Failed to create harvest', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to create harvest', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -29,7 +29,7 @@ export class HarvestsService {
       return this.harvestRepository.find();
     } catch (error) {
       this.loggerService.error('Failed to find all harvests', error);
-      throw new HttpException('Failed to find all harvests', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find all harvests', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -45,8 +45,11 @@ export class HarvestsService {
     }
     return harvest;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to find harvest', error);
-      throw new HttpException('Failed to find harvest', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find harvest', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -56,8 +59,11 @@ export class HarvestsService {
       this.harvestRepository.merge(harvest, updateHarvestDto);
       return this.harvestRepository.save(harvest);
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to update harvest', error);
-      throw new HttpException('Failed to update harvest', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to update harvest', HttpStatus.INTERNAL_SERVER_ERROR);
     } 
   }
 
@@ -69,8 +75,11 @@ export class HarvestsService {
         throw new NotFoundException(`Harvest with ID ${id} was not found`);
       }
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to remove harvest', error);
-      throw new HttpException('Failed to remove harvest', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to remove harvest', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

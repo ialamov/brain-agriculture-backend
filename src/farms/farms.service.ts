@@ -32,8 +32,11 @@ export class FarmsService {
     const farm = this.farmRepository.create(createFarmDto);
     return this.farmRepository.save(farm);
 		} catch (error) {
+			if (error instanceof HttpException) {
+				throw error;
+			}
 			this.loggerService.error('Failed to create farm', error);
-			throw new HttpException('Failed to create farm', HttpStatus.BAD_REQUEST);
+			throw new HttpException('Failed to create farm', HttpStatus.INTERNAL_SERVER_ERROR);
 		}
   }
 
@@ -44,7 +47,7 @@ export class FarmsService {
     });
     } catch (error) {
       this.loggerService.error('Failed to find all farms', error);
-      throw new HttpException('Failed to find all farms', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find all farms', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -62,8 +65,11 @@ export class FarmsService {
     
     return farm;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to find farm', error);
-      throw new HttpException('Failed to find farm', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find farm', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -88,8 +94,11 @@ export class FarmsService {
       
       return this.farmRepository.save(farm);
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       this.loggerService.error('Failed to update farm', error);
-      throw new HttpException('Failed to update farm', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to update farm', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -101,8 +110,11 @@ export class FarmsService {
       throw new NotFoundException(`Farm with ID ${id} was not found`);
     }
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to remove farm', error);
-      throw new HttpException('Failed to remove farm', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to remove farm', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

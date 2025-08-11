@@ -9,6 +9,6 @@ export class Crop {
   @Column()
   name: string;
 
-  @ManyToOne(() => Harvest, (haverst) => haverst.crops, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Harvest, (harvest) => harvest.crops, { onDelete: 'CASCADE' })
   harvest: Harvest;
 }

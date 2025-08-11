@@ -8,12 +8,13 @@ import { Farm } from '../entities/farm.entity';
 
 @ApiTags('Farms')
 @Controller('farms')
-@UseGuards(AuthGuard('local'))
+@UseGuards(AuthGuard('jwt'))
 export class FarmsController {
   constructor(private readonly farmsService: FarmsService) {}
 
-  @ApiOperation({ summary: 'Create a new farm' })
+  @ApiOperation({ summary: 'Create a new farm' }) 
   @ApiResponse({ status: 201, description: 'Farm created successfully' })
+  @ApiBearerAuth()
   @Post()
   create(@Body() createFarmDto: CreateFarmDto): Promise<Farm> {
     return this.farmsService.create(createFarmDto);
@@ -21,7 +22,8 @@ export class FarmsController {
 
   @ApiOperation({ summary: 'Get all farms' })
   @ApiResponse({ status: 200, description: 'List of all farms' })
-  @Get()
+  @ApiBearerAuth()
+    @Get()
   async findAll(): Promise<Farm[]> {
     const farms = await this.farmsService.findAll();
     return farms;
@@ -30,6 +32,7 @@ export class FarmsController {
   @ApiOperation({ summary: 'Get farm by ID' })
   @ApiResponse({ status: 200, description: 'Farm found' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
+  @ApiBearerAuth()
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Farm> {
     return this.farmsService.findOne(id);
@@ -38,6 +41,7 @@ export class FarmsController {
   @ApiOperation({ summary: 'Update farm' })
   @ApiResponse({ status: 200, description: 'Farm updated successfully' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
+  @ApiBearerAuth()
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateFarmDto: UpdateFarmDto): Promise<Farm> {
     return this.farmsService.update(id, updateFarmDto);
@@ -46,6 +50,7 @@ export class FarmsController {
   @ApiOperation({ summary: 'Delete farm' })
   @ApiResponse({ status: 200, description: 'Farm deleted successfully' })
   @ApiResponse({ status: 404, description: 'Farm not found' })
+  @ApiBearerAuth()
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
     return this.farmsService.remove(id);

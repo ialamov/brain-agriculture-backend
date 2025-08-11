@@ -14,6 +14,8 @@ import { FarmersModule } from './farmers/farmers.module';
 import { FarmsModule } from './farms/farms.module';
 import { HarvestsModule } from './harvests/harvests.module';
 import { CropsModule } from './crops/crops.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { JwtStrategy } from './auth/strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -38,9 +40,12 @@ import { CropsModule } from './crops/crops.module';
     FarmsModule,
     HarvestsModule,
     CropsModule,
+    MetricsModule,
   ],
 })
 export class AppModule {
+  providers = [JwtStrategy];
+  
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(LoggerMiddleware)

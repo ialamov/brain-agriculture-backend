@@ -75,8 +75,7 @@ describe('AuthService', () => {
       } as User;
       
       const findOneSpy = jest.spyOn(userRepository, 'findOne')
-        .mockResolvedValueOnce(null) 
-        .mockResolvedValueOnce(mockUser);
+        .mockResolvedValueOnce(null);
       
       jest.spyOn(userRepository, 'create').mockReturnValue(mockUser);
       jest.spyOn(userRepository, 'save').mockResolvedValue(mockUser);
@@ -88,8 +87,11 @@ describe('AuthService', () => {
       
       const result = await service.create(createUserDto);
       
-      expect(result).toEqual({ accessToken: 'test-token' });
-      expect(findOneSpy).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ 
+        accessToken: 'test-token',
+        user: { id: '1', email: 'test@test.com' }
+      });
+      expect(findOneSpy).toHaveBeenCalledTimes(1);
       expect(userRepository.create).toHaveBeenCalledWith(createUserDto);
       expect(userRepository.save).toHaveBeenCalledWith(mockUser);
     });
@@ -119,7 +121,10 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto);
       
-      expect(result).toEqual({ accessToken: 'test-token' });
+      expect(result).toEqual({ 
+        accessToken: 'test-token',
+        user: { id: '1', email: 'test@test.com' }
+      });
       expect(userRepository.findOne).toHaveBeenCalledWith({ where: { email: 'test@test.com' } });
       expect(jwtService.sign).toHaveBeenCalledWith({ username: 'test@test.com', sub: '1' });
       expect(bcrypt.compare).toHaveBeenCalledWith('password', 'hashedPassword');

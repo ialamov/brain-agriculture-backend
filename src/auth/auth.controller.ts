@@ -1,4 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 import { AuthService } from './auth.service';
@@ -14,14 +15,17 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'User already exists' })
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
-      return this.authService.create(createUserDto);
+      return await this.authService.create(createUserDto);
   }
 
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 400, description: 'Invalid credentials' })
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({passthrough: true}) res: Response,
+  ) {
+    return await this.authService.login(loginDto);
   }
 }

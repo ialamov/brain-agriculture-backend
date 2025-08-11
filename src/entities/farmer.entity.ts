@@ -21,6 +21,6 @@ export class Farmer {
   @Column()
   name: string;
 
-  @OneToMany(() => Farm, (farm) => farm.farmer)
+  @OneToMany(() => Farm, (farm) => farm.farmer, { onDelete: 'CASCADE' })
   farm: Farm[];
 }

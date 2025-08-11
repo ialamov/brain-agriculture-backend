@@ -18,17 +18,27 @@ export class AuthService {
         private logger: LoggerService,
     ) {}
 
-    async create(createUserDto: CreateUserDto): Promise<{ accessToken: string }> {
+    async create(createUserDto: CreateUserDto): Promise<{ accessToken: string, user: UserWithoutPassword }> {
       let user = await this.userRepository.findOne({ where: { email: createUserDto.email } });
       
       if (user) {
         throw new BadRequestException('User already exists');
       }
       
-      user = await this.userRepository.create(createUserDto);
+      // Create new user - the @BeforeInsert hook will hash the password
+      user = this.userRepository.create(createUserDto);
       user = await this.userRepository.save(user);
   
-      return this.login({ email: user.email, password: createUserDto.password });
+      // Generate JWT token for the new user
+      const accessToken = this.jwtService.sign({ username: user.email, sub: user.id });
+      
+      return {
+        accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+        }
+      };
     }
 
     async validateUser(email: string, pass: string): Promise<UserWithoutPassword | null> {
@@ -40,7 +50,7 @@ export class AuthService {
         return null;
     }
 
-    async login(loginDto: LoginDto): Promise<{ accessToken: string }> {
+    async login(loginDto: LoginDto): Promise<{ accessToken: string, user: UserWithoutPassword }> {
         const user = await this.validateUser(loginDto.email, loginDto.password);
         if (!user) {
             this.logger.error('Invalid credentials', undefined, 'AuthService');
@@ -48,6 +58,10 @@ export class AuthService {
         }
         return {
           accessToken: this.jwtService.sign({ username: user.email, sub: user.id }),
+          user: {
+            id: user.id,
+            email: user.email,
+          }
         };
     }
 }

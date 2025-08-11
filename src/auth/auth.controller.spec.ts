@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { BadRequestException } from '@nestjs/common';
+import { Response } from 'express';
 
 const mockAuthService = () => ({
   create: jest.fn(),
@@ -39,7 +40,7 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'password123',
       };
-      const expectedResult = { accessToken: 'test-jwt-token' };
+      const expectedResult = { accessToken: 'test-jwt-token', user: { id: '1', email: 'test@example.com' } };
 
       jest.spyOn(authService, 'create').mockResolvedValue(expectedResult);
 
@@ -87,13 +88,20 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'password123',
       };
-      const expectedResult = { accessToken: 'test-jwt-token' };
+      const mockResponse = {
+        header: jest.fn(),
+      } as unknown as Response;
+      
+      const authServiceResult = { 
+        accessToken: 'test-jwt-token', 
+        user: { id: '1', email: 'test@example.com' } 
+      };
 
-      jest.spyOn(authService, 'login').mockResolvedValue(expectedResult);
+      jest.spyOn(authService, 'login').mockResolvedValue(authServiceResult);
 
-      const result = await controller.login(loginDto);
+      const result = await controller.login(loginDto, mockResponse);
 
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(authServiceResult);
       expect(authService.login).toHaveBeenCalledWith(loginDto);
     });
 
@@ -102,12 +110,15 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'wrongpassword',
       };
+      const mockResponse = {
+        header: jest.fn(),
+      } as unknown as Response;
 
       jest.spyOn(authService, 'login').mockRejectedValue(
         new BadRequestException('Invalid credentials')
       );
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockResponse)).rejects.toThrow(
         BadRequestException
       );
       expect(authService.login).toHaveBeenCalledWith(loginDto);
@@ -118,12 +129,15 @@ describe('AuthController', () => {
         email: 'nonexistent@example.com',
         password: 'password123',
       };
+      const mockResponse = {
+        header: jest.fn(),
+      } as unknown as Response;
 
       jest.spyOn(authService, 'login').mockRejectedValue(
         new BadRequestException('Invalid credentials')
       );
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockResponse)).rejects.toThrow(
         BadRequestException
       );
       expect(authService.login).toHaveBeenCalledWith(loginDto);
@@ -134,12 +148,15 @@ describe('AuthController', () => {
         email: 'invalid-email',
         password: '', // empty password
       };
+      const mockResponse = {
+        header: jest.fn(),
+      } as unknown as Response;
 
       jest.spyOn(authService, 'login').mockRejectedValue(
         new BadRequestException('Validation failed')
       );
 
-      await expect(controller.login(invalidLoginDto as LoginDto)).rejects.toThrow(
+      await expect(controller.login(invalidLoginDto as LoginDto, mockResponse)).rejects.toThrow(
         BadRequestException
       );
     });

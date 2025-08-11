@@ -21,7 +21,7 @@ export class CropsService {
       return this.cropRepository.save(crop);
     } catch (error) {
       this.loggerService.error('Failed to create crop', error);
-      throw new HttpException('Failed to create crop', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to create crop', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -30,7 +30,7 @@ export class CropsService {
       return this.cropRepository.find();
     } catch (error) {
       this.loggerService.error('Failed to find all crops', error);
-      throw new HttpException('Failed to find all crops', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find all crops', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -43,8 +43,11 @@ export class CropsService {
     }
       return crop;
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to find crop', error);
-      throw new HttpException('Failed to find crop', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to find crop', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -54,8 +57,11 @@ export class CropsService {
       this.cropRepository.merge(crop, updateCropDto);
       return this.cropRepository.save(crop);
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to update crop', error);
-      throw new HttpException('Failed to update crop', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to update crop', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -67,8 +73,11 @@ export class CropsService {
         throw new NotFoundException(`Crop with ID ${id} was not found`);
       }
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.loggerService.error('Failed to remove crop', error);
-      throw new HttpException('Failed to remove crop', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Failed to remove crop', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

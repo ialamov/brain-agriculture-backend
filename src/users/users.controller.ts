@@ -1,19 +1,20 @@
 import { Body, Controller, Delete, Param, Patch, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Get } from '@nestjs/common';
 import { User } from '../entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(AuthGuard('local'))
+@UseGuards(AuthGuard('jwt'))
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'List of all users' })
+  @ApiBearerAuth()
   @Get()
   async findAll(): Promise<User[]> {
     return this.usersService.findAll();
@@ -22,6 +23,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiBearerAuth()
   @Patch(':id')
   async update(
     @Param('id') id: string,
@@ -33,6 +35,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiBearerAuth()
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.usersService.remove(id);

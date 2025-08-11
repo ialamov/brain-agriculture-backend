@@ -13,6 +13,6 @@ export class Harvest {
   @ManyToOne(() => Farm, (farm) => farm.harvests, { onDelete: 'CASCADE' })
   farm: Farm;
 
-  @OneToMany(() => Crop, (crop) => crop.harvest)
+  @OneToMany(() => Crop, (crop) => crop.harvest, { onDelete: 'CASCADE' })
   crops: Crop[];
 }
