@@ -2,19 +2,22 @@ import { DataSource } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { Farmer } from '../../entities/farmer.entity';
 import { Farm } from '../../entities/farm.entity';
-import { Crop } from '../../entities/crop.entity';
 import { Harvest } from '../../entities/harvest.entity';
-import * as bcrypt from 'bcrypt';
+import { Crop } from '../../entities/crop.entity';
+import { faker } from '@faker-js/faker';
 
 export class InitialDataSeed {
   constructor(private dataSource: DataSource) {}
 
   async run(): Promise<void> {
-    console.log('🌱 Starting database seeding...');
+    console.log('🌱 Starting data seeding...');
 
-    // Create admin user
-    const adminUser = await this.createAdminUser();
-    console.log('✅ Admin user created:', adminUser.email);
+    // Clear existing data (optional - comment out if you want to keep existing data)
+    await this.clearExistingData();
+
+    // Create users
+    const users = await this.createUsers();
+    console.log(`✅ Created ${users.length} users`);
 
     // Create farmers
     const farmers = await this.createFarmers();
@@ -29,213 +32,196 @@ export class InitialDataSeed {
     console.log(`✅ Created ${harvests.length} harvests`);
 
     // Create crops
-    const crops = await this.createCrops(harvests);
+    const crops = await this.createCrops(harvests, farms);
     console.log(`✅ Created ${crops.length} crops`);
 
-    console.log('🎉 Database seeding completed successfully!');
+    console.log('🎉 All data seeded successfully!');
   }
 
-  private async createAdminUser(): Promise<User> {
-    const userRepository = this.dataSource.getRepository(User);
+  private async clearExistingData(): Promise<void> {
+    console.log('🧹 Clearing existing data...');
     
-    // Check if admin already exists
-    let adminUser = await userRepository.findOne({ where: { email: 'admin@admin.com' } });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
     
-    if (!adminUser) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+    try {
+      // Disable foreign key checks temporarily
+      await queryRunner.query('SET session_replication_role = replica;');
       
-      adminUser = userRepository.create({
-        email: 'admin@admin.com',
-        password: hashedPassword,
-      });
+      // Clear tables in reverse dependency order
+      await queryRunner.query('TRUNCATE TABLE "crops" CASCADE');
+      await queryRunner.query('TRUNCATE TABLE "harvests" CASCADE');
+      await queryRunner.query('TRUNCATE TABLE "farms" CASCADE');
+      await queryRunner.query('TRUNCATE TABLE "farmers" CASCADE');
+      await queryRunner.query('TRUNCATE TABLE "users" CASCADE');
       
-      await userRepository.save(adminUser);
+      // Re-enable foreign key checks
+      await queryRunner.query('SET session_replication_role = DEFAULT;');
+      
+      console.log('✅ Existing data cleared');
+    } finally {
+      await queryRunner.release();
     }
-    
-    return adminUser;
+  }
+
+  private async createUsers(): Promise<User[]> {
+    const userRepository = this.dataSource.getRepository(User);
+    const users: Partial<User>[] = [];
+
+    for (let i = 0; i < 500; i++) {
+      const user = {
+        email: faker.internet.email(),
+        password: 'password123', // Will be hashed by @BeforeInsert
+      };
+      users.push(user);
+    }
+
+    return await userRepository.save(users);
   }
 
   private async createFarmers(): Promise<Farmer[]> {
     const farmerRepository = this.dataSource.getRepository(Farmer);
-    
-    const farmersData = [
-      {
-        name: 'João Silva',
-        cpf: '123.456.789-01',
-        cnpj: undefined,
-      },
-      {
-        name: 'Maria Santos',
-        cpf: undefined,
-        cnpj: '12.345.678/0001-90',
-      },
-      {
-        name: 'Pedro Oliveira',
-        cpf: '456.789.123-45',
-        cnpj: undefined,
-      },
-    ];
+    const farmers: Partial<Farmer>[] = [];
 
-    const farmers: Farmer[] = [];
-    
-    for (const farmerData of farmersData) {
-      let farmer: Farmer | null = null;
+    for (let i = 0; i < 500; i++) {
+      // Randomly decide if farmer has CPF or CNPJ (not both)
+      const hasCPF = Math.random() > 0.5;
       
-      if (farmerData.cpf) {
-        farmer = await farmerRepository.findOne({ where: { cpf: farmerData.cpf } });
-      } else if (farmerData.cnpj) {
-        farmer = await farmerRepository.findOne({ where: { cnpj: farmerData.cnpj } });
-      }
-      
-      if (!farmer) {
-        farmer = farmerRepository.create(farmerData);
-        await farmerRepository.save(farmer);
-      }
+      const farmer = {
+        name: faker.person.fullName(),
+        cpf: hasCPF ? this.generateValidCPF() : undefined,
+        cnpj: !hasCPF ? this.generateValidCNPJ() : undefined,
+      };
       
       farmers.push(farmer);
     }
-    
-    return farmers;
+
+    return await farmerRepository.save(farmers);
   }
 
   private async createFarms(farmers: Farmer[]): Promise<Farm[]> {
     const farmRepository = this.dataSource.getRepository(Farm);
-    
-    const farmsData = [
-      {
-        name: 'Fazenda São João',
-        city: 'São Paulo',
-        state: 'SP',
-        totalArea: 150.5,
-        cultivationArea: 120.0,
-        vegetationArea: 30.5,
-        farmer: farmers[0],
-      },
-      {
-        name: 'Sítio Boa Vista',
-        city: 'Rio de Janeiro',
-        state: 'RJ',
-        totalArea: 75.2,
-        cultivationArea: 60.0,
-        vegetationArea: 15.2,
-        farmer: farmers[1],
-      },
-      {
-        name: 'Chácara Verde',
-        city: 'Belo Horizonte',
-        state: 'MG',
-        totalArea: 200.0,
-        cultivationArea: 150.0,
-        vegetationArea: 50.0,
-        farmer: farmers[2],
-      },
+    const farms: Partial<Farm>[] = [];
+
+    const brazilianCities = [
+      'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Brasília', 'Salvador',
+      'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife',
+      'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 'Campinas',
+      'Nova Iguaçu', 'São Gonçalo', 'Mauá', 'Duque de Caxias', 'São José dos Campos'
     ];
 
-    const farms: Farm[] = [];
-    
-    for (const farmData of farmsData) {
-      let farm = await farmRepository.findOne({ 
-        where: { 
-          name: farmData.name,
-        } 
-      });
-      
-      if (!farm) {
-        farm = farmRepository.create(farmData);
-        await farmRepository.save(farm);
-      }
-      
+    const brazilianStates = [
+      'SP', 'RJ', 'MG', 'DF', 'BA', 'CE', 'AM', 'PR', 'PE', 'RS',
+      'PA', 'GO', 'SC', 'ES', 'PB', 'RN', 'MT', 'AL', 'PI', 'MS'
+    ];
+
+    for (let i = 0; i < 500; i++) {
+      const totalArea = parseFloat(faker.number.float({ min: 10, max: 1000, fractionDigits: 2 }).toFixed(2));
+      const cultivationArea = parseFloat(faker.number.float({ min: 5, max: totalArea * 0.8, fractionDigits: 2 }).toFixed(2));
+      const vegetationArea = parseFloat(faker.number.float({ min: 2, max: totalArea - cultivationArea, fractionDigits: 2 }).toFixed(2));
+
+      const farm = {
+        name: `${faker.company.name()} - ${faker.location.street()}`,
+        city: faker.helpers.arrayElement(brazilianCities),
+        state: faker.helpers.arrayElement(brazilianStates),
+        totalArea,
+        cultivationArea,
+        vegetationArea,
+        farmerId: farmers[i % farmers.length].id, // Distribute farms among farmers
+      };
+
       farms.push(farm);
     }
-    
-    return farms;
+
+    return await farmRepository.save(farms);
   }
 
   private async createHarvests(farms: Farm[]): Promise<Harvest[]> {
     const harvestRepository = this.dataSource.getRepository(Harvest);
-    
-    const harvestsData = [
-      {
-        year: 2024,
-        farm: farms[0],
-      },
-      {
-        year: 2024,
-        farm: farms[1],
-      },
-      {
-        year: 2023,
-        farm: farms[2],
-      },
-      {
-        year: 2024,
-        farm: farms[2],
-      },
-    ];
+    const harvests: Partial<Harvest>[] = [];
 
-    const harvests: Harvest[] = [];
-    
-    for (const harvestData of harvestsData) {
-      let harvest = await harvestRepository.findOne({ 
-        where: { 
-          year: harvestData.year,
-        } 
-      });
-      
-      if (!harvest) {
-        harvest = harvestRepository.create(harvestData);
-        await harvestRepository.save(harvest);
-      }
-      
+    for (let i = 0; i < 500; i++) {
+      const harvest = {
+        year: faker.number.int({ min: 2020, max: 2024 }),
+        farmId: farms[i % farms.length].id, // Use farmId instead of farm object
+      };
+
       harvests.push(harvest);
     }
-    
-    return harvests;
+
+    return await harvestRepository.save(harvests);
   }
 
-  private async createCrops(harvests: Harvest[]): Promise<Crop[]> {
+  private async createCrops(harvests: Harvest[], farms: Farm[]): Promise<Crop[]> {
     const cropRepository = this.dataSource.getRepository(Crop);
-    
-    const cropsData = [
-      {
-        name: 'Milho',
-        harvest: harvests[0],
-      },
-      {
-        name: 'Soja',
-        harvest: harvests[0],
-      },
-      {
-        name: 'Café',
-        harvest: harvests[1],
-      },
-      {
-        name: 'Feijão',
-        harvest: harvests[2],
-      },
-      {
-        name: 'Arroz',
-        harvest: harvests[3],
-      },
+    const crops: Partial<Crop>[] = [];
+
+    const cropNames = [
+      'Soja', 'Milho', 'Arroz', 'Feijão', 'Trigo', 'Café', 'Cana-de-açúcar',
+      'Algodão', 'Laranja', 'Banana', 'Uva', 'Maçã', 'Tomate', 'Cenoura',
+      'Batata', 'Cebola', 'Alho', 'Pimentão', 'Beringela', 'Abóbora',
+      'Melancia', 'Melão', 'Manga', 'Abacaxi', 'Limão', 'Tangerina',
+      'Pêssego', 'Ameixa', 'Pera', 'Kiwi', 'Framboesa', 'Morango'
     ];
 
-    const crops: Crop[] = [];
-    
-    for (const cropData of cropsData) {
-      let crop = await cropRepository.findOne({ 
-        where: { 
-          name: cropData.name,
-        } 
-      });
-      
-      if (!crop) {
-        crop = cropRepository.create(cropData);
-        await cropRepository.save(crop);
-      }
-      
+    for (let i = 0; i < 500; i++) {
+      const crop = {
+        name: faker.helpers.arrayElement(cropNames),
+        harvestId: harvests[i % harvests.length].id, // Use harvestId instead of harvest object
+        farmId: farms[i % farms.length].id, // Use farmId instead of farm object
+      };
+
       crops.push(crop);
     }
+
+    return await cropRepository.save(crops);
+  }
+
+  private generateValidCPF(): string {
+    // Generate a valid CPF format (XXX.XXX.XXX-XX)
+    const numbers = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
     
-    return crops;
+    // Calculate first digit
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += numbers[i] * (10 - i);
+    }
+    const firstDigit = ((sum * 10) % 11) % 10;
+    
+    // Calculate second digit
+    numbers.push(firstDigit);
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += numbers[i] * (11 - i);
+    }
+    const secondDigit = ((sum * 10) % 11) % 10;
+    numbers.push(secondDigit);
+    
+    return numbers.join('').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+
+  private generateValidCNPJ(): string {
+    // Generate a valid CNPJ format (XX.XXX.XXX/XXXX-XX)
+    const numbers = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
+    
+    // Calculate first digit
+    const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += numbers[i] * weights1[i];
+    }
+    const firstDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    
+    // Calculate second digit
+    numbers.push(firstDigit);
+    const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    sum = 0;
+    for (let i = 0; i < 13; i++) {
+      sum += numbers[i] * weights2[i];
+    }
+    const secondDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    numbers.push(secondDigit);
+    
+    return numbers.join('').replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
   }
 }

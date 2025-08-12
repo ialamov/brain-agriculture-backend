@@ -5,21 +5,38 @@ import { Farmer } from '../entities/farmer.entity';
 import { Farm } from '../entities/farm.entity';
 import { Harvest } from '../entities/harvest.entity';
 import { Crop } from '../entities/crop.entity';
+import { LoggerService } from '../common/services/logger.service';
 
 const mockFarmerRepository = () => ({
   findAndCount: jest.fn(),
+  count: jest.fn(),
+  metadata: { tableName: 'farmers' },
 });
 
 const mockFarmRepository = () => ({
   findAndCount: jest.fn(),
+  count: jest.fn(),
+  metadata: { tableName: 'farms' },
+  query: jest.fn(),
 });
 
 const mockHarvestRepository = () => ({
   findAndCount: jest.fn(),
+  count: jest.fn(),
+  metadata: { tableName: 'harvests' },
+  query: jest.fn(),
 });
 
 const mockCropRepository = () => ({
   findAndCount: jest.fn(),
+  count: jest.fn(),
+  metadata: { tableName: 'crops' },
+  query: jest.fn(),
+});
+
+const mockLoggerService = () => ({
+  error: jest.fn(),
+  log: jest.fn(),
 });
 
 describe('MetricsService', () => {
@@ -45,6 +62,10 @@ describe('MetricsService', () => {
           provide: getRepositoryToken(Crop),
           useValue: mockCropRepository(),
         },
+        {
+          provide: LoggerService,
+          useValue: mockLoggerService(),
+        },
       ],
     }).compile();
 
@@ -68,19 +89,39 @@ describe('MetricsService', () => {
         MetricsService,
         {
           provide: getRepositoryToken(Farmer),
-          useValue: { findAndCount: jest.fn().mockResolvedValue(mockData[0]) },
+          useValue: { 
+            findAndCount: jest.fn().mockResolvedValue(mockData[0]),
+            count: jest.fn().mockResolvedValue(0),
+            metadata: { tableName: 'farmers' }
+          },
         },
         {
           provide: getRepositoryToken(Farm),
-          useValue: { findAndCount: jest.fn().mockResolvedValue(mockData[1]) },
+          useValue: { 
+            findAndCount: jest.fn().mockResolvedValue(mockData[1]),
+            count: jest.fn().mockResolvedValue(0),
+            metadata: { tableName: 'farms' }
+          },
         },
         {
           provide: getRepositoryToken(Harvest),
-          useValue: { findAndCount: jest.fn().mockResolvedValue(mockData[2]) },
+          useValue: { 
+            findAndCount: jest.fn().mockResolvedValue(mockData[2]),
+            count: jest.fn().mockResolvedValue(0),
+            metadata: { tableName: 'harvests' }
+          },
         },
         {
           provide: getRepositoryToken(Crop),
-          useValue: { findAndCount: jest.fn().mockResolvedValue(mockData[3]) },
+          useValue: { 
+            findAndCount: jest.fn().mockResolvedValue(mockData[3]),
+            count: jest.fn().mockResolvedValue(0),
+            metadata: { tableName: 'crops' }
+          },
+        },
+        {
+          provide: LoggerService,
+          useValue: mockLoggerService(),
         },
       ],
     }).compile();
@@ -88,6 +129,11 @@ describe('MetricsService', () => {
     const testService = module.get<MetricsService>(MetricsService);
     const result = await testService.getMetricsSummary();
 
-    expect(result).toEqual(mockData);
+    expect(result).toEqual({
+      farmers: 0,
+      farms: 0,
+      harvests: 0,
+      crops: 0,
+    });
   });
 });

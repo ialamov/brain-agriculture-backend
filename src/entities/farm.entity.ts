@@ -1,9 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { Farmer } from "./farmer.entity";
 import { Harvest } from "./harvest.entity";
+import { Crop } from "./crop.entity";
 
 @Entity('farms')
 export class Farm {
+  [x: string]: any;
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -34,4 +36,7 @@ export class Farm {
 
   @OneToMany(() => Harvest, (harvest) => harvest.farm)
   harvests: Harvest[];
+
+  @OneToMany(() => Crop, (crop) => crop.farm)
+  crops: Crop[];
 }

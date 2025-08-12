@@ -16,4 +16,24 @@ export class MetricsController {
   async getMetricsSummary(): Promise<any> {
     return this.metricsService.getMetricsSummary();
   }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all unique harvest years and crops names' })
+  @ApiResponse({ status: 200, description: 'Unique years and crops names' })
+  @ApiResponse({ status: 404, description: 'No unique years and/or crops names found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @Get('/unique-years-and-crops')
+  async getUniqueYearsAndCrops(): Promise<any> {
+    return this.metricsService.getUniqueYearsAndCrops();
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Total area registered' })
+  @ApiResponse({ status: 200, description: 'Total area registered' })
+  @ApiResponse({ status: 404, description: 'There is no area registered' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @Get('/total-area-registered')
+  async getTotalAreaRegistered(): Promise<any> {
+    return this.metricsService.getTotalAreaRegistered();
+  }
 }

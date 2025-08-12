@@ -25,6 +25,7 @@
     "seed": "ts-node src/database/seed-runner.ts"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
